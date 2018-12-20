@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:os-core="http://www.openspaces.org/schema/core"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+       http://www.openspaces.org/schema/core
+       http://www.openspaces.org/schema/12.2/core/openspaces-core.xsd">
+
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+        <property name="driverClassName" value="net.sourceforge.jtds.jdbc.Driver"/>
+        <property name="url" value="jdbc:jtds:sqlserver://localhost/ReportingDB"/>
+        <property name="username" value="SA"/>
+        <property name="password" value="Admin123"/>
+        <property name="initialSize" value="48"/>
+        <property name="maxActive" value="48"/>
+
+    </bean>
+
+    <context:component-scan base-package="com.gigaspaces" />
+    <context:annotation-config/>
+
+    <bean id="initialLoader" class="com.gigaspaces.InitialLoader" init-method="init"/>
+    <!--init-method="init"-->
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate4.LocalSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"/>
+        <property name="annotatedClasses">
+            <list>
+                <value>com.gigaspaces.pojos.InsurancePolicy</value>
+            </list>
+        </property>
+        <property name="hibernateProperties">
+            <props>
+                <prop key="hibernate.dialect">org.hibernate.dialect.SQLServer2008Dialect</prop>
+                <prop key="hibernate.show_sql">false</prop>
+
+                <prop key="hibernate.cache.provider_class">org.hibernate.cache.NoCacheProvider</prop>
+                <prop key="hibernate.cache.use_second_level_cache">false</prop>
+                <prop key="hibernate.cache.use_query_cache">false</prop>
+                <prop key="hibernate.jdbc.batch_size">1000</prop>
+            </props>
+        </property>
+    </bean>
+
+    <bean id="hibernateSpaceDataSource" class="org.openspaces.persistency.hibernate.DefaultHibernateSpaceDataSourceFactoryBean">
+        <property name="sessionFactory" ref="sessionFactory"/>
+        <property name="fetchSize" value="1000"/>
+        <property name="performOrderById" value="true"/>
+        <property name="initialLoadThreadPoolSize" value="48"/>
+        <property name="initialLoadChunkSize" value="2000000"/>
+        <property name="useScrollableResultSet" value="false"/>
+        <property name="augmentInitialLoadEntries" value="false"/>
+        <property name="initialLoadEntries">
+            <list>
+                <value>com.gigaspaces.pojos.InsurancePolicy</value>
+            </list>
+        </property>
+    </bean>
+
+    <os-core:embedded-space id="space" space-name="space" schema="persistent" space-data-source="hibernateSpaceDataSource">
+        <os-core:properties>
+            <props>
+                <!-- Use ALL IN CACHE -->
+                <prop key="space-config.engine.cache_policy">1</prop>
+                <prop key="space-config.lease_manager.expiration_time_interval">10000</prop>
+                <prop key="cluster-config.cache-loader.external-data-source">true</prop>
+                <prop key="cluster-config.cache-loader.central-data-source">true</prop>
+            </props>
+        </os-core:properties>
+    </os-core:embedded-space>
+
+    <os-core:giga-space id="gigaspace" space="space" />
+</beans>
