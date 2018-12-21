@@ -28,6 +28,11 @@
         <property name="annotatedClasses">
             <list>
                 <value>com.gigaspaces.pojos.InsurancePolicy</value>
+                <value>com.gigaspaces.pojos.InsurancePolicyItem</value>
+                <value>com.gigaspaces.pojos.InsurancePolicyItemCoverageValue</value>
+                <value>com.gigaspaces.pojos.Limit</value>
+                <value>com.gigaspaces.pojos.LimitCoverage</value>
+                <value>com.gigaspaces.pojos.LimitLocation</value>
             </list>
         </property>
         <property name="hibernateProperties">
@@ -54,6 +59,11 @@
         <property name="initialLoadEntries">
             <list>
                 <value>com.gigaspaces.pojos.InsurancePolicy</value>
+                <value>com.gigaspaces.pojos.InsurancePolicyItem</value>
+                <value>com.gigaspaces.pojos.InsurancePolicyItemCoverageValue</value>
+                <value>com.gigaspaces.pojos.Limit</value>
+                <value>com.gigaspaces.pojos.LimitCoverage</value>
+                <value>com.gigaspaces.pojos.LimitLocation</value>
             </list>
         </property>
     </bean>
