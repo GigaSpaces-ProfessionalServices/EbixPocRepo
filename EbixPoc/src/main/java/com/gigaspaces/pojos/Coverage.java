@@ -9,15 +9,15 @@ import java.sql.Date;
  */
 public class Coverage {
 
-    private int id;
+    private Integer id;
     private String reference;
     private String country;
     private String state;
     private String city;
     private Date inception;
     private Date expiry;
-    private int policyaid;
-    private int groupingId;
+    private Integer policyaid;
+    private Integer groupingId;
     private String coverageId;
     private BigDecimal value;
     private String currencyId;
@@ -61,11 +61,11 @@ public class Coverage {
         this.newExposure = source.newExposure;
     }
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -117,19 +117,19 @@ public class Coverage {
         this.expiry = expiry;
     }
 
-    public int getPolicyaid() {
+    public Integer getPolicyaid() {
         return policyaid;
     }
 
-    public void setPolicyaid(int policyaid) {
+    public void setPolicyaid(Integer policyaid) {
         this.policyaid = policyaid;
     }
 
-    public int getGroupingId() {
+    public Integer getGroupingId() {
         return groupingId;
     }
 
-    public void setGroupingId(int groupingId) {
+    public void setGroupingId(Integer groupingId) {
         this.groupingId = groupingId;
     }
 

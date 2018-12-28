@@ -13,7 +13,7 @@ import java.util.Objects;
 public class GroupingAsset {
 
     private static int currentId = 0;
-    private int id;
+    private Integer id;
     private String country;
     private String state;
     private String city;
@@ -27,11 +27,11 @@ public class GroupingAsset {
     }
 
     @SpaceId(autoGenerate = true)
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 

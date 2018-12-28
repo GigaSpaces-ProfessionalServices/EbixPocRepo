@@ -1,4 +1,4 @@
-package com.gigaspaces.pojos;
+package com.gigaspaces.pojos.tables;
 
 import com.gigaspaces.annotation.pojo.SpaceClass;
 import com.gigaspaces.annotation.pojo.SpaceId;

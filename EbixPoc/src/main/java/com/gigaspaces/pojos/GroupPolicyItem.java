@@ -8,27 +8,27 @@ import java.sql.Date;
  */
 public class GroupPolicyItem {
 
-    private int id;
+    private Integer id;
     private String reference;
     private String country;
     private String state;
     private String city;
-    private long tiv;
+    private Long tiv;
     private Date inception;
     private Date expiry;
-    private int policyaid;
-    private int tempPolicyItemId;
-    private int groupingId;
-    private long line;
+    private Integer policyaid;
+    private Integer tempPolicyItemId;
+    private Integer groupingId;
+    private Long line;
     private String policyReference;
 
     public GroupPolicyItem() {}
 
-    public int getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -64,11 +64,11 @@ public class GroupPolicyItem {
         this.city = city;
     }
 
-    public long getTiv() {
+    public Long getTiv() {
         return tiv;
     }
 
-    public void setTiv(long tiv) {
+    public void setTiv(Long tiv) {
         this.tiv = tiv;
     }
 
@@ -88,35 +88,35 @@ public class GroupPolicyItem {
         this.expiry = expiry;
     }
 
-    public int getPolicyaid() {
+    public Integer getPolicyaid() {
         return policyaid;
     }
 
-    public void setPolicyaid(int policyaid) {
+    public void setPolicyaid(Integer policyaid) {
         this.policyaid = policyaid;
     }
 
-    public int getTempPolicyItemId() {
+    public Integer getTempPolicyItemId() {
         return tempPolicyItemId;
     }
 
-    public void setTempPolicyItemId(int tempPolicyItemId) {
+    public void setTempPolicyItemId(Integer tempPolicyItemId) {
         this.tempPolicyItemId = tempPolicyItemId;
     }
 
-    public int getGroupingId() {
+    public Integer getGroupingId() {
         return groupingId;
     }
 
-    public void setGroupingId(int groupingId) {
+    public void setGroupingId(Integer groupingId) {
         this.groupingId = groupingId;
     }
 
-    public long getLine() {
+    public Long getLine() {
         return line;
     }
 
-    public void setLine(long line) {
+    public void setLine(Long line) {
         this.line = line;
     }
 

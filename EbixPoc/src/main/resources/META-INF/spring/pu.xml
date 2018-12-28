@@ -27,12 +27,12 @@
         <property name="dataSource" ref="dataSource"/>
         <property name="annotatedClasses">
             <list>
-                <value>com.gigaspaces.pojos.InsurancePolicy</value>
-                <value>com.gigaspaces.pojos.InsurancePolicyItem</value>
-                <value>com.gigaspaces.pojos.InsurancePolicyItemCoverageValue</value>
-                <value>com.gigaspaces.pojos.Limit</value>
-                <value>com.gigaspaces.pojos.LimitCoverage</value>
-                <value>com.gigaspaces.pojos.LimitLocation</value>
+                <value>com.gigaspaces.pojos.tables.InsurancePolicy</value>
+                <value>com.gigaspaces.pojos.tables.InsurancePolicyItem</value>
+                <value>com.gigaspaces.pojos.tables.InsurancePolicyItemCoverageValue</value>
+                <value>com.gigaspaces.pojos.tables.Limit</value>
+                <value>com.gigaspaces.pojos.tables.LimitCoverage</value>
+                <value>com.gigaspaces.pojos.tables.LimitLocation</value>
             </list>
         </property>
         <property name="hibernateProperties">
@@ -58,12 +58,12 @@
         <property name="augmentInitialLoadEntries" value="false"/>
         <property name="initialLoadEntries">
             <list>
-                <value>com.gigaspaces.pojos.InsurancePolicy</value>
-                <value>com.gigaspaces.pojos.InsurancePolicyItem</value>
-                <value>com.gigaspaces.pojos.InsurancePolicyItemCoverageValue</value>
-                <value>com.gigaspaces.pojos.Limit</value>
-                <value>com.gigaspaces.pojos.LimitCoverage</value>
-                <value>com.gigaspaces.pojos.LimitLocation</value>
+                <value>com.gigaspaces.pojos.tables.InsurancePolicy</value>
+                <value>com.gigaspaces.pojos.tables.InsurancePolicyItem</value>
+                <value>com.gigaspaces.pojos.tables.InsurancePolicyItemCoverageValue</value>
+                <value>com.gigaspaces.pojos.tables.Limit</value>
+                <value>com.gigaspaces.pojos.tables.LimitCoverage</value>
+                <value>com.gigaspaces.pojos.tables.LimitLocation</value>
             </list>
         </property>
     </bean>
