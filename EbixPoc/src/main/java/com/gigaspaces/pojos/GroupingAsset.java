@@ -1,18 +1,13 @@
 package com.gigaspaces.pojos;
 
-import com.gigaspaces.annotation.pojo.SpaceClass;
-import com.gigaspaces.annotation.pojo.SpaceId;
-
 import java.util.Objects;
 
 /**
  * @author Denys_Novikov
  * Date: 12/24/18
  */
-@SpaceClass
 public class GroupingAsset {
 
-    private static int currentId = 0;
     private Integer id;
     private String country;
     private String state;
@@ -21,12 +16,10 @@ public class GroupingAsset {
     public GroupingAsset() {}
 
     public GroupingAsset(String country, String state) {
-        id = ++currentId;
         this.country = country;
         this.state = state;
     }
 
-    @SpaceId(autoGenerate = true)
     public Integer getId() {
         return id;
     }
