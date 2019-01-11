@@ -12,6 +12,8 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 
@@ -24,14 +26,15 @@ public class InitialLoader {
     private static Logger logger = LoggerFactory.getLogger(InitialLoader.class);
     private static final LhSeqComparator LHSEQ_COMPARATOR = new LhSeqComparator();
     private static final LSeqComparator LSEQ_COMPARATOR = new LSeqComparator();
-    private final int objCount = 1001;
+    private final int objCount = 1000001;
 
     @Autowired
     private GigaSpace gigaspace;
 
-    public void init() {
+    public void init() throws ExecutionException, InterruptedException {
+        logger.info("Retrieving insurancePolicyItems...");
         InsurancePolicyItem[] insurancePolicyItems = gigaspace.readMultiple(createInsurancePolicyItemSQLQuery());
-        logger.info("GROUPING BY COUNTRY,STATE");
+        logger.info("insurancePolicyItems size: " + insurancePolicyItems.length);
 
         Set<GroupingAsset> groupingAssets = Arrays.stream(insurancePolicyItems).map(insurancePolicyItem ->
                 new GroupingAsset(insurancePolicyItem.getCountry(), insurancePolicyItem.getState())).collect(Collectors.toSet());
@@ -44,11 +47,12 @@ public class InitialLoader {
         logger.info("Step 1 result size -> " + groupingAssets.size());
 
         //---------------------------
-
-        logger.info("Create GroupPolicyItems");
-        InsurancePolicy[] insurancePolicies = gigaspace.readMultiple(createInsurancePolicySQLQuery());
-
         Map<Integer, List<InsurancePolicyItem>> policyaidToItem = Arrays.stream(insurancePolicyItems).collect(Collectors.groupingBy(InsurancePolicyItem::getPolicyaId));
+
+        logger.info("Retrieving insurancePolicies...");
+        InsurancePolicy[] insurancePolicies = gigaspace.readMultiple(createInsurancePolicySQLQuery());
+        logger.info("insurancePolicies size: " + insurancePolicies.length);
+
         Map<Integer, InsurancePolicy> idToPolicy = Arrays.stream(insurancePolicies).collect(Collectors.toMap(InsurancePolicy::getId, item -> item));
 
         List<GroupPolicyItem> groupPolicyItems = new ArrayList<>();
@@ -94,8 +98,9 @@ public class InitialLoader {
         //---------------------------
         // copy data from groupPolicyItems to coverage (COLLECT ALL COVERAGES)
 
-        logger.info("Collecting all coverages");
+        logger.info("Retrieving insurancePolicyItemCoverageValues...");
         InsurancePolicyItemCoverageValue[] insurancePolicyItemCoverageValues = gigaspace.readMultiple(createInsurancePolicyCoverageValueSQLQuery());
+        logger.info("insurancePolicyItemCoverageValues size: " + insurancePolicyItemCoverageValues.length);
 
         Map<Integer, List<InsurancePolicyItemCoverageValue>> mappedByPolicyItemId = Arrays.stream(insurancePolicyItemCoverageValues).collect(Collectors.groupingBy(InsurancePolicyItemCoverageValue::getPolicyItemId));
 
@@ -145,11 +150,17 @@ public class InitialLoader {
 
         logger.info("Step 3 result size -> " + coverages.size());
 
-
-
+        logger.info("Retrieving limits...");
         Limit[] limits = gigaspace.readMultiple(createLimitSQLQuery());
+        logger.info("limits size: " + limits.length);
+        logger.info("Retrieving limitLocations...");
         LimitLocation[] limitLocations = gigaspace.readMultiple(createLimitLocationSQLQuery());
+        logger.info("limitLocations size: " + limitLocations.length);
+        logger.info("Retrieving limitCoverages...");
         LimitCoverage[] limitCoverages = gigaspace.readMultiple(createLimitCoverageSQLQuery());
+        logger.info("limitCoverages size: " + limitCoverages.length);
+
+
 
         Map<Integer, InsurancePolicy> mappedById = Arrays.stream(insurancePolicies).collect(Collectors.toMap(InsurancePolicy::getId, policy -> policy));
         Map<Integer, Limit> mappedLimitByLimitId = Arrays.stream(limits).collect(Collectors.toMap(Limit::getLimitId, limit -> limit));
@@ -157,9 +168,10 @@ public class InitialLoader {
         Map<Integer, List<LimitCoverage>> mappedLimitCoverageByLimitId = Arrays.stream(limitCoverages).collect(Collectors.groupingBy(LimitCoverage::getLimitId));
 
 
-        List<QueryLimit> resultLimits = new ArrayList<>();
+        List<QueryLimit> resultLimits = Collections.synchronizedList(new ArrayList<>());
 
-        for (GroupPolicyItem groupPolicyItem : groupPolicyItems) {
+        groupPolicyItems.parallelStream().forEach(groupPolicyItem -> {
+//        for (GroupPolicyItem groupPolicyItem : groupPolicyItems) {
 
             QueryLimit queryLimit = new QueryLimit();
             queryLimit.setId(groupPolicyItem.getId());
@@ -181,7 +193,7 @@ public class InitialLoader {
 
             if (mappedLimitLocationByLocationId.containsKey(groupPolicyItem.getId())) {
                 for (LimitLocation limitLocation : mappedLimitLocationByLocationId.get(groupPolicyItem.getId())) {
-                    
+
                     QueryLimit updatedWithLimitLocation = new QueryLimit(queryLimit);
 
                     if (mappedLimitByLimitId.containsKey(limitLocation.getLimitId())) {
@@ -220,8 +232,7 @@ public class InitialLoader {
             } else {
                 resultLimits.add(queryLimit);
             }
-
-        }
+        });
 
         logger.info("Limits size -> " + resultLimits.size());
 
@@ -279,9 +290,11 @@ public class InitialLoader {
         Map<String, List<Combination>> mappedCombinations = combinations.stream().collect(Collectors.groupingBy(combination -> "" + combination.getId() + combination.getPolicyaid() + combination.getGroupingId()));
         Map<String, GroupPolicyItem> mappedGroupPolicyItems = groupPolicyItems.stream().collect(Collectors.toMap(groupPolicyItem -> "" + groupPolicyItem.getId() + groupPolicyItem.getPolicyaid() + groupPolicyItem.getGroupingId(), groupPolicyItem -> groupPolicyItem));
 
-        List<CalculationLoop> calculationLoops = new ArrayList<>();
+        List<CalculationLoop> allCalculationLoops = Collections.synchronizedList(new ArrayList<>());
 
-        for (Map.Entry<String, List<Combination>> entry : mappedCombinations.entrySet()) {
+
+        mappedCombinations.entrySet().parallelStream().forEach(entry -> {
+//        for (Map.Entry<String, List<Combination>> entry : mappedCombinations.entrySet()) {
 
             if (mappedGroupPolicyItems.containsKey(entry.getKey())) {
 
@@ -300,22 +313,25 @@ public class InitialLoader {
                     calculationLoop.setInception(groupPolicyItem.getInception());
                     calculationLoop.setExpiry(groupPolicyItem.getExpiry());
 
-                    calculationLoops.add(calculationLoop);
+                    allCalculationLoops.add(calculationLoop);
                 }
             }
-        }
+        });
 
-        logger.info("calculationLoops size -> " + calculationLoops.size());
+        logger.info("calculationLoops size -> " + allCalculationLoops.size());
 
 
-        Set<CalculationLoop> calculationLoopsRI = calculationLoops.stream().filter(CalculationLoop::getRiLimit).collect(Collectors.toSet());
-        calculationLoops = calculationLoops.stream().filter(calculationLoop -> !calculationLoop.getRiLimit()).collect(Collectors.toList());
+        final Set<CalculationLoop> calculationLoopsRI = allCalculationLoops.stream().filter(CalculationLoop::getRiLimit).collect(Collectors.toSet());
+        final List<CalculationLoop> calculationLoops = allCalculationLoops.stream().filter(calculationLoop -> !calculationLoop.getRiLimit()).collect(Collectors.toList());
 
         logger.info("Unique calculationLoops -> " + calculationLoopsRI.size());
         logger.info("After filter calculationLoops -> " + calculationLoops.size());
-        updateMaxCalculationLoops(calculationLoops);
-        updateMaxCalculationLoops(calculationLoopsRI);
 
+        CompletableFuture calcLoops = CompletableFuture.runAsync(() -> updateMaxCalculationLoops(calculationLoops));
+        CompletableFuture calcLoopsRI = CompletableFuture.runAsync(() -> updateMaxCalculationLoops(calculationLoopsRI));
+
+        calcLoops.get();
+        calcLoopsRI.get();
 
         updateExposureAndLimit(calculationLoops.stream().filter(calculationLoop -> calculationLoop.getNewExposure() != null).collect(Collectors.toList()), false);
 
@@ -346,8 +362,6 @@ public class InitialLoader {
                 update.setSumTIVForLimitCSL(finalExposure);
             }
         }
-
-        Set<BigDecimal> getNewExposureAfter = calculationLoopsRI.stream().map(CalculationLoop::getNewExposure).collect(Collectors.toSet());
 
 //        -------------------------------------------------------
 
@@ -393,28 +407,23 @@ public class InitialLoader {
 
     private void updateExposureAndLimit(Collection<CalculationLoop> calculationLoops, boolean ri) {
         // cursor C1 simulation
-        Set<Integer> c1cursor = calculationLoops.stream().map(CalculationLoop::getLhSeq).sorted().collect(Collectors.toSet());
-        Iterator<Integer> c1cursorIterator = c1cursor.iterator();
+        calculationLoops.parallelStream().map(CalculationLoop::getLhSeq).sorted().forEach(limitHeader -> {
 
 
-        while (c1cursorIterator.hasNext()) {
-            Integer limitHeader = c1cursorIterator.next();
-
+//        for (Integer limitHeader : c1cursor) {
             // cursor B1 simulation
-            Set<String> b1cursor = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader)).map(CalculationLoop::getlSeq).sorted().collect(Collectors.toSet());
+            calculationLoops.parallelStream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader)).map(CalculationLoop::getlSeq).sorted().forEach(aB1cursor -> {
 
-            Iterator<String> b1cursorIterator = b1cursor.iterator();
+//            for (String aB1cursor : b1cursor) {
+                Integer limit = getAnIntFromString(aB1cursor);
 
-            while (b1cursorIterator.hasNext()) {
-                Integer limit = getAnIntFromString(b1cursorIterator.next());
-
-                Map<String, BigDecimal> newExposureSumsCSL0 = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+                Map<String, BigDecimal> newExposureSumsCSL0 = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit) && !calculationLoop.getCsl())
                         .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid() + calculationLoop.getCoverageId(),
                                 CalculationLoop::getNewExposure, BigDecimal::add));
 
-                Map<String, List<CalculationLoop>> mappedForSumTIVForCSL0 = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+                Map<String, List<CalculationLoop>> mappedForSumTIVForCSL0 = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit) && !calculationLoop.getCsl())
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid() + calculationLoop.getCoverageId()));
 
                 for (Map.Entry<String, List<CalculationLoop>> entry : mappedForSumTIVForCSL0.entrySet()) {
@@ -424,14 +433,13 @@ public class InitialLoader {
                 }
 
 
-
-                Map<String, BigDecimal> newExposureSumsCSL1 = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, BigDecimal> newExposureSumsCSL1 = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid(),
                                 CalculationLoop::getNewExposure, BigDecimal::add));
 
-                Map<String, List<CalculationLoop>> mappedForSumTIVForCSL1 = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, List<CalculationLoop>> mappedForSumTIVForCSL1 = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid()));
 
                 for (Map.Entry<String, List<CalculationLoop>> entry : mappedForSumTIVForCSL1.entrySet()) {
@@ -441,13 +449,13 @@ public class InitialLoader {
                 }
 
 
-                Map<String, BigDecimal> newExposureSumsExcessCSL = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, BigDecimal> newExposureSumsExcessCSL = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid() + calculationLoop.getId(),
                                 CalculationLoop::getNewExposure, BigDecimal::add));
 
-                Map<String, List<CalculationLoop>> mappedForSumTIVForExcessCSL = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, List<CalculationLoop>> mappedForSumTIVForExcessCSL = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid() + calculationLoop.getId()));
 
                 for (Map.Entry<String, List<CalculationLoop>> entry : mappedForSumTIVForExcessCSL.entrySet()) {
@@ -458,34 +466,34 @@ public class InitialLoader {
 
                 // calculationLoops updated
 
-                calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).collect(Collectors.toList())
+                calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).collect(Collectors.toList())
                         .forEach(calculationLoop -> {
-                    if (calculationLoop.getCsl()) {
-                        if (isBigDecimalNull(calculationLoop.getSumTIVForExcessCSL()) || isBigDecimalNull(calculationLoop.getSumTIVForExcess())) {
-                            calculationLoop.setApportionExcess(BigDecimal.ZERO);
-                        } else {
-                            calculationLoop.setApportionExcess(calculationLoop.getSumTIVForExcessCSL().divide(calculationLoop.getSumTIVForExcess(), 8, RoundingMode.HALF_UP));
-                        }
-                    } else {
-                        if (isBigDecimalNull(calculationLoop.getNewExposure()) || isBigDecimalNull(calculationLoop.getSumTIVForExcess())) {
-                            calculationLoop.setApportionExcess(BigDecimal.ZERO);
-                        } else {
-                            calculationLoop.setApportionExcess(calculationLoop.getNewExposure().divide(calculationLoop.getSumTIVForExcess(), 8, RoundingMode.HALF_UP));
-                        }
-                    }
-                });
+                            if (calculationLoop.getCsl()) {
+                                if (isBigDecimalNull(calculationLoop.getSumTIVForExcessCSL()) || isBigDecimalNull(calculationLoop.getSumTIVForExcess())) {
+                                    calculationLoop.setApportionExcess(BigDecimal.ZERO);
+                                } else {
+                                    calculationLoop.setApportionExcess(calculationLoop.getSumTIVForExcessCSL().divide(calculationLoop.getSumTIVForExcess(), 8, RoundingMode.HALF_UP));
+                                }
+                            } else {
+                                if (isBigDecimalNull(calculationLoop.getNewExposure()) || isBigDecimalNull(calculationLoop.getSumTIVForExcess())) {
+                                    calculationLoop.setApportionExcess(BigDecimal.ZERO);
+                                } else {
+                                    calculationLoop.setApportionExcess(calculationLoop.getNewExposure().divide(calculationLoop.getSumTIVForExcess(), 8, RoundingMode.HALF_UP));
+                                }
+                            }
+                        });
                 // -- calculated Excess Apportionment
 
-                calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).collect(Collectors.toList())
+                calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).collect(Collectors.toList())
                         .forEach(calculationLoop -> calculationLoop.setNewExcess(calculationLoop.getExcess().multiply(calculationLoop.getApportionExcess())));
 
                 // -- apply excess for non csl
-                calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+                calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(calculationLoop -> !calculationLoop.getCsl())
                         .collect(Collectors.toList()).forEach(calculationLoop -> {
-                            calculationLoop.setAfterExcess(calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()).compareTo(BigDecimal.ZERO) <= 0 ? BigDecimal.ZERO : calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()));
+                    calculationLoop.setAfterExcess(calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()).compareTo(BigDecimal.ZERO) <= 0 ? BigDecimal.ZERO : calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()));
                 });
 
 
@@ -496,13 +504,13 @@ public class InitialLoader {
 
                 // --SUM TIV FOR APPORTIONMENT OF LIMIT
 
-                Map<String, BigDecimal> sumTIVForLimitMapCSL0 = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+                Map<String, BigDecimal> sumTIVForLimitMapCSL0 = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit) && !calculationLoop.getCsl())
                         .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid(),
                                 CalculationLoop::getAfterExcess, BigDecimal::add));
 
-                Map<String, List<CalculationLoop>> mappedForSumTIVForLimitCSL0Map = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+                Map<String, List<CalculationLoop>> mappedForSumTIVForLimitCSL0Map = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit) && !calculationLoop.getCsl())
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid()));
 
                 for (Map.Entry<String, List<CalculationLoop>> entry : mappedForSumTIVForLimitCSL0Map.entrySet()) {
@@ -512,15 +520,13 @@ public class InitialLoader {
                 }
 
 
-
-
-                Map<String, BigDecimal> sumTIVForLimitCSL1Map = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, BigDecimal> sumTIVForLimitCSL1Map = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid(),
                                 CalculationLoop::getAfterExcess, BigDecimal::add));
 
-                Map<String, List<CalculationLoop>> mappedForSumTIVForLimitCSL1Map = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, List<CalculationLoop>> mappedForSumTIVForLimitCSL1Map = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid()));
 
                 for (Map.Entry<String, List<CalculationLoop>> entry : mappedForSumTIVForLimitCSL1Map.entrySet()) {
@@ -530,14 +536,13 @@ public class InitialLoader {
                 }
 
 
-
-                Map<String, BigDecimal> sumTIVForLimitCSLMap = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, BigDecimal> sumTIVForLimitCSLMap = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid() + calculationLoop.getId(),
                                 CalculationLoop::getAfterExcess, BigDecimal::add));
 
-                Map<String, List<CalculationLoop>> mappedForSumTIVForLimitCSLMap = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
+                Map<String, List<CalculationLoop>> mappedForSumTIVForLimitCSLMap = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getGroupingId() + calculationLoop.getPolicyaid() + calculationLoop.getId()));
 
                 for (Map.Entry<String, List<CalculationLoop>> entry : mappedForSumTIVForLimitCSLMap.entrySet()) {
@@ -548,17 +553,17 @@ public class InitialLoader {
 
 
                 // --Calculate Limit Apportionment
-                calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).collect(Collectors.toList())
+                calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).collect(Collectors.toList())
                         .forEach(calculationLoop -> {
                             if (calculationLoop.getCsl()) {
-                                if (isBigDecimalNull(calculationLoop.getSumTIVForLimitCSL()) || isBigDecimalNull(calculationLoop.getSumTIVForLimit()) ) {
+                                if (isBigDecimalNull(calculationLoop.getSumTIVForLimitCSL()) || isBigDecimalNull(calculationLoop.getSumTIVForLimit())) {
                                     calculationLoop.setApportionLimit(BigDecimal.ZERO);
                                 } else {
                                     calculationLoop.setApportionLimit(calculationLoop.getSumTIVForLimitCSL().divide(calculationLoop.getSumTIVForLimit(), 8, RoundingMode.HALF_UP));
                                 }
                             } else {
-                                if (isBigDecimalNull(calculationLoop.getAfterExcess()) || isBigDecimalNull(calculationLoop.getSumTIVForLimit()) ) {
+                                if (isBigDecimalNull(calculationLoop.getAfterExcess()) || isBigDecimalNull(calculationLoop.getSumTIVForLimit())) {
                                     calculationLoop.setApportionLimit(BigDecimal.ZERO);
                                 } else {
                                     calculationLoop.setApportionLimit(calculationLoop.getAfterExcess().divide(calculationLoop.getSumTIVForLimit(), 8, RoundingMode.HALF_UP));
@@ -567,42 +572,37 @@ public class InitialLoader {
                         });
 
 
-
                 // -- Apportion Limit
 
-                calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                        .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).collect(Collectors.toList())
+                calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                        && getAnIntFromString(calculationLoop.getlSeq()) == limit)).collect(Collectors.toList())
                         .forEach(calculationLoop -> calculationLoop.setNewLimit(calculationLoop.getLimit().multiply(calculationLoop.getApportionLimit())));
-
 
 
                 // apply limit
 
                 if (ri) {
-                    calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                            .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+                    calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                            && getAnIntFromString(calculationLoop.getlSeq()) == limit) && !calculationLoop.getCsl())
                             .collect(Collectors.toList()).forEach(calculationLoop ->
-                        calculationLoop.setNewExposure(calculationLoop.getAfterExcess().subtract(calculationLoop.getNewLimit()).compareTo(BigDecimal.ZERO) >= 0 ? calculationLoop.getNewExposure().subtract(calculationLoop.getNewLimit()) : calculationLoop.getNewExposure().subtract(calculationLoop.getAfterExcess())));
+                            calculationLoop.setNewExposure(calculationLoop.getAfterExcess().subtract(calculationLoop.getNewLimit()).compareTo(BigDecimal.ZERO) >= 0 ? calculationLoop.getNewExposure().subtract(calculationLoop.getNewLimit()) : calculationLoop.getNewExposure().subtract(calculationLoop.getAfterExcess())));
                 } else {
-                    calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                            .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+                    calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                            && getAnIntFromString(calculationLoop.getlSeq()) == limit) && !calculationLoop.getCsl())
                             .collect(Collectors.toList()).forEach(calculationLoop ->
-                        calculationLoop.setNewExposure(calculationLoop.getAfterExcess().subtract(calculationLoop.getNewLimit()).compareTo(BigDecimal.ZERO) >= 0 ? calculationLoop.getNewLimit() : calculationLoop.getAfterExcess()));
-                }
+                            calculationLoop.setNewExposure(calculationLoop.getAfterExcess().subtract(calculationLoop.getNewLimit()).compareTo(BigDecimal.ZERO) >= 0 ? calculationLoop.getNewLimit() : calculationLoop.getAfterExcess()));
 
-
-                if (!ri) {
                     updateCalcAuditForLimit(calculationLoops, limitHeader, limit);
                 }
 
-            //-- update new exposure for all future limit sequencing of item in aggregation grouping
+                //-- update new exposure for all future limit sequencing of item in aggregation grouping
 
-                Map<String, BigDecimal> newExposures = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
+                Map<String, BigDecimal> newExposures = calculationLoops.parallelStream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
                         .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getCoverageId(),
                                 CalculationLoop::getNewExposure));
 
-                Map<String, List<CalculationLoop>> mappedForNewExposures = calculationLoops.stream().filter(calculationLoop -> (calculationLoop.getLhSeq() > limitHeader)
-                        ||  (calculationLoop.getLhSeq().equals(limitHeader) && getAnIntFromString(calculationLoop.getlSeq()) >= limit))
+                Map<String, List<CalculationLoop>> mappedForNewExposures = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq() > limitHeader)
+                        || (calculationLoop.getLhSeq().equals(limitHeader) && getAnIntFromString(calculationLoop.getlSeq()) >= limit))
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getCoverageId()));
 
 
@@ -613,8 +613,7 @@ public class InitialLoader {
                 }
 
 
-
-                Map<String, List<CalculationLoop>> mappedForTIV = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq() > limitHeader)
+                Map<String, List<CalculationLoop>> mappedForTIV = calculationLoops.parallelStream().filter(calculationLoop -> calculationLoop.getLhSeq() > limitHeader)
                         .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getCoverageId()));
 
                 for (Map.Entry<String, List<CalculationLoop>> entry : mappedForTIV.entrySet()) {
@@ -624,8 +623,8 @@ public class InitialLoader {
                 }
 
 
-            }
-        }
+            });
+        });
     }
 
     private int getAnIntFromString(String input) {
@@ -633,8 +632,8 @@ public class InitialLoader {
     }
 
     private void updateCalcAuditForLimit(Collection<CalculationLoop> calculationLoops, Integer limitHeader, Integer limit) {
-        calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+        calculationLoops.stream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                && getAnIntFromString(calculationLoop.getlSeq()) == limit) && !calculationLoop.getCsl())
                 .collect(Collectors.toList()).forEach(calculationLoop -> {
                     calculationLoop.setCalcAudit(!calculationLoop.getExcessBreach()
                             ? calculationLoop.getCalcAudit() + " EXCESS HAS NOT BEEN REACHED: (TIV) " + calculationLoop.getNewExposure().toString() + " (EXCESS) " + calculationLoop.getNewExcess().toString()
@@ -648,26 +647,19 @@ public class InitialLoader {
 
 
         // cursor AA1 simulation
-        Set<Integer> aa1cursor = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
-                .map(CalculationLoop::getCslSeq).sorted().collect(Collectors.toSet());
+        calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
+                .map(CalculationLoop::getCslSeq).sorted().distinct().forEach(csl -> {
 
-        Iterator<Integer> aa1cursorIterator = aa1cursor.iterator();
-
-        while (aa1cursorIterator.hasNext()) {
-            Integer csl = aa1cursorIterator.next();
-
-
-            calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                    .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit)
-                    .filter(calculationLoop -> calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
+//        for (Integer csl : aa1cursor) {
+            calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                    && getAnIntFromString(calculationLoop.getlSeq()) == limit) && calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
                     .collect(Collectors.toList()).forEach(calculationLoop ->
                     calculationLoop.setNewExposure(calculationLoop.getAfterExcess().subtract(calculationLoop.getNewLimit()).compareTo(BigDecimal.ZERO) >= 0 ? calculationLoop.getNewLimit() : calculationLoop.getAfterExcess())
             );
 
-            calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                    .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit)
-                    .filter(calculationLoop -> calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
+            calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                    && getAnIntFromString(calculationLoop.getlSeq()) == limit) && calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
                     .collect(Collectors.toList()).forEach(calculationLoop -> {
                         calculationLoop.setCalcAudit(!calculationLoop.getExcessBreach()
                                 ? calculationLoop.getCalcAudit() + " EXCESS HAS NOT BEEN REACHED: (TIV)" + calculationLoop.getNewExposure().toString() + " (EXCESS) " + calculationLoop.getNewExcess().toString()
@@ -680,13 +672,12 @@ public class InitialLoader {
             );
 
 
-            Map<String, BigDecimal> limitUpdates = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                    .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit)
-                    .filter(calculationLoop -> calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
+            Map<String, BigDecimal> limitUpdates = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                    && getAnIntFromString(calculationLoop.getlSeq()) == limit) && calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
                     .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getLhSeq() + calculationLoop.getlSeq(),
                             calculationLoop -> calculationLoop.getNewLimit().subtract(calculationLoop.getAfterExcess()).compareTo(BigDecimal.ZERO) <= 0 ? BigDecimal.ZERO : calculationLoop.getNewLimit().subtract(calculationLoop.getAfterExcess())));
 
-            Map<String, List<CalculationLoop>> mappedForLimitUpdates = calculationLoops.stream().filter(CalculationLoop::getCsl)
+            Map<String, List<CalculationLoop>> mappedForLimitUpdates = calculationLoops.parallelStream().filter(CalculationLoop::getCsl)
                     .filter(calculationLoop -> calculationLoop.getCslSeq() > csl)
                     .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getLhSeq() + calculationLoop.getlSeq()));
 
@@ -696,12 +687,12 @@ public class InitialLoader {
                 }
             }
 
-        }
+        });
     }
 
     private void updateCalcAuditForExcess(Collection<CalculationLoop> calculationLoops, Integer limitHeader, Integer limit) {
-        calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(calculationLoop -> !calculationLoop.getCsl())
+        calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                && getAnIntFromString(calculationLoop.getlSeq()) == limit) &&  !calculationLoop.getCsl())
                 .collect(Collectors.toList()).forEach(calculationLoop -> {
                     calculationLoop.setCalcAudit(calculationLoop.getAfterExcess().equals(BigDecimal.ZERO)
                             ? calculationLoop.getCalcAudit() + " EXCESS HAS NOT BEEN REACHED: (TIV)" + calculationLoop.getNewExposure().toString() + " (EXCESS) " + calculationLoop.getNewExcess().toString()
@@ -715,26 +706,19 @@ public class InitialLoader {
 
 
         // cursor A1 simulation
-        Set<Integer> a1cursor = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit).filter(CalculationLoop::getCsl)
-                .map(CalculationLoop::getCslSeq).sorted().collect(Collectors.toSet());
+        calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                && getAnIntFromString(calculationLoop.getlSeq()) == limit)).filter(CalculationLoop::getCsl)
+                .map(CalculationLoop::getCslSeq).sorted().collect(Collectors.toSet()).forEach(csl -> {
 
-        Iterator<Integer> a1cursorIterator = a1cursor.iterator();
-
-        while (a1cursorIterator.hasNext()) {
-            Integer csl = a1cursorIterator.next();
-
-
-            calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                    .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit)
-                    .filter(calculationLoop -> calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
+//        for (Integer csl : a1cursor) {
+            calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                    && getAnIntFromString(calculationLoop.getlSeq()) == limit) && calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
                     .collect(Collectors.toList()).forEach(calculationLoop ->
-                calculationLoop.setAfterExcess(calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()).compareTo(BigDecimal.ZERO) <= 0 ? BigDecimal.ZERO : calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()))
+                    calculationLoop.setAfterExcess(calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()).compareTo(BigDecimal.ZERO) <= 0 ? BigDecimal.ZERO : calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()))
             );
 
-            calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                    .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit)
-                    .filter(calculationLoop -> calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
+            calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                    && getAnIntFromString(calculationLoop.getlSeq()) == limit) && calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
                     .collect(Collectors.toList()).forEach(calculationLoop -> {
                         calculationLoop.setCalcAudit(calculationLoop.getAfterExcess().equals(BigDecimal.ZERO)
                                 ? calculationLoop.getCalcAudit() + " EXCESS HAS NOT BEEN REACHED: (TIV)" + calculationLoop.getNewExposure().toString() + " (EXCESS) " + calculationLoop.getNewExcess().toString()
@@ -747,13 +731,12 @@ public class InitialLoader {
             // -- Update Excess for other CSL sequences
 
 
-            Map<String, BigDecimal> excessUpdates = calculationLoops.stream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader))
-                    .filter(calculationLoop -> getAnIntFromString(calculationLoop.getlSeq()) == limit)
-                    .filter(calculationLoop -> calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
+            Map<String, BigDecimal> excessUpdates = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
+                    && getAnIntFromString(calculationLoop.getlSeq()) == limit) && calculationLoop.getCslSeq().equals(csl)).filter(CalculationLoop::getCsl)
                     .collect(Collectors.toMap(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getLhSeq() + calculationLoop.getlSeq(),
                             calculationLoop -> calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()).compareTo(BigDecimal.ZERO) <= 0 ? calculationLoop.getNewExposure().subtract(calculationLoop.getNewExcess()) : BigDecimal.ZERO));
 
-            Map<String, List<CalculationLoop>> mappedForExcessUpdates = calculationLoops.stream().filter(CalculationLoop::getCsl)
+            Map<String, List<CalculationLoop>> mappedForExcessUpdates = calculationLoops.parallelStream().filter(CalculationLoop::getCsl)
                     .filter(calculationLoop -> calculationLoop.getCslSeq() > csl)
                     .collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getLhSeq() + calculationLoop.getlSeq()));
 
@@ -765,30 +748,30 @@ public class InitialLoader {
                     });
                 }
             }
-        }
+        });
     }
 
     private void updateMaxCalculationLoops(Collection<CalculationLoop> calculationLoops) {
-        Map<String, List<CalculationLoop>> groupedCalculationLoops = calculationLoops.stream().collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId()));
 
-        List<Max> maxList = new ArrayList<>();
+        List<Max> maxList = Collections.synchronizedList(new ArrayList<>());
+        calculationLoops.parallelStream().collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId())).forEach((key, values) -> {
 
-        for (Map.Entry<String, List<CalculationLoop>> entry : groupedCalculationLoops.entrySet()) {
+//        for (Map.Entry<String, List<CalculationLoop>> entry : groupedCalculationLoops.entrySet()) {
 
-            Integer maxlh = Collections.max(entry.getValue(), LHSEQ_COMPARATOR).getLhSeq();
-            String maxl = Collections.max(entry.getValue(), LSEQ_COMPARATOR).getlSeq();
-            CalculationLoop first = entry.getValue().get(0);
+            Integer maxlh = Collections.max(values, LHSEQ_COMPARATOR).getLhSeq();
+            String maxl = Collections.max(values, LSEQ_COMPARATOR).getlSeq();
+            CalculationLoop first = values.get(0);
 
             maxList.add(new Max(maxlh, maxl, first.getId(), first.getPolicyaid(), first.getGroupingId()));
 
-        }
+        });
 
         logger.info("Max size -> " + maxList.size());
 
-        Map<String, List<CalculationLoop>> mappedCalculationLoops = calculationLoops.stream().collect(Collectors.groupingBy(calculationLoop ->
+        Map<String, List<CalculationLoop>> mappedCalculationLoops = calculationLoops.parallelStream().collect(Collectors.groupingBy(calculationLoop ->
                 "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId() + calculationLoop.getLhSeq() + calculationLoop. getlSeq()));
 
-        Map<String, Max> mappedMaxList = maxList.stream().collect(Collectors.toMap(max ->
+        Map<String, Max> mappedMaxList = maxList.parallelStream().collect(Collectors.toMap(max ->
                 "" + max.getId() + max.getPolicyaid() + max.getGroupingId() + max.getMaxlh() + max. getMaxl(), max -> max));
 
 
@@ -860,7 +843,8 @@ public class InitialLoader {
     }
 
     private SQLQuery<Limit> createLimitSQLQuery() {
-        return new SQLQuery<>(Limit.class, "");
+        return new SQLQuery<>(Limit.class, "")
+                .setProjections("limitId", "limitHeaderName", "limitHeaderSequence", "limitSequence", "limit", "excess", "deductible", "csl", "limitType", "riLimit");
     }
 
     private SQLQuery<LimitLocation> createLimitLocationSQLQuery() {
@@ -872,7 +856,8 @@ public class InitialLoader {
     }
 
     private SQLQuery<InsurancePolicyItemCoverageValue> createInsurancePolicyCoverageValueSQLQuery() {
-        return new SQLQuery<>(InsurancePolicyItemCoverageValue.class, "");
+        return new SQLQuery<>(InsurancePolicyItemCoverageValue.class, "")
+                .setProjections("policyItemId", "coverageId", "value", "currencyId", "ai", "coverageDependencyId", "percentage", "periodOfIndemnity");
     }
 
     private SQLQuery<InsurancePolicyItem> createInsurancePolicyItemSQLQuery() {
@@ -880,15 +865,9 @@ public class InitialLoader {
     }
 
     private SQLQuery<InsurancePolicy> createInsurancePolicySQLQuery() {
-        List<Integer> ids = new ArrayList<>();
-        for (int i = 1; i < objCount; i++) {
-            ids.add(i);
-        }
-        logger.info("ids -> " + ids.size());
-
         // add limiter here to reduce result set
-        return new SQLQuery<>(InsurancePolicy.class, "id IN (?) ")
-                .setParameter(1, ids);
+        return new SQLQuery<>(InsurancePolicy.class, "")
+                .setProjections("id", "reference", "line");
     }
 
     private boolean isBigDecimalNull(BigDecimal bigDecimal) {
