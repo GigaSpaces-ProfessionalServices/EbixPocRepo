@@ -1,7 +1,5 @@
 package com.gigaspaces.pojos;
 
-import java.math.BigDecimal;
-
 /**
  * @author Denys_Novikov
  * Date: 12/26/18
@@ -12,25 +10,25 @@ public class Combination {
     private Integer policyaid;
     private Integer groupingId;
     private String coverageId;
-    private BigDecimal TIV;
+    private Long TIV;
     private String covCurrency;
     private Boolean covAi;
     private Integer coverageDependencyId;
-    private BigDecimal percentage;
+    private Long percentage;
     private Integer periodOfIndemnity;
-    private BigDecimal sumTIVForExcess;
-    private BigDecimal apportionExcess;
-    private BigDecimal sumTIVForLimit;
-    private BigDecimal apportionLimit;
-    private BigDecimal sumTIVForExcessCSL;
-    private BigDecimal sumTIVForLimitCSL;
-    private BigDecimal newExposure;
-    private BigDecimal limit;
-    private BigDecimal excess;
-    private BigDecimal deductible;
-    private BigDecimal newLimit;
-    private BigDecimal newExcess;
-    private BigDecimal newDeductible;
+    private Long sumTIVForExcess;
+    private Long apportionExcess;
+    private Long sumTIVForLimit;
+    private Long apportionLimit;
+    private Long sumTIVForExcessCSL;
+    private Long sumTIVForLimitCSL;
+    private Long newExposure;
+    private Long limit;
+    private Long excess;
+    private Long deductible;
+    private Long newLimit;
+    private Long newExcess;
+    private Long newDeductible;
     private Boolean csl;
     private Integer cslSeq;
     private String limitType;
@@ -38,9 +36,9 @@ public class Combination {
     private String lSeq;
     private String limitHeaderName;
     private Boolean riLimit;
-    private BigDecimal afterExcess;
+    private Long afterExcess;
     private Boolean maxSeq;
-    private BigDecimal finalExposure;
+    private Long finalExposure;
 
     public Combination() {
     }
@@ -113,11 +111,11 @@ public class Combination {
         this.coverageId = coverageId;
     }
 
-    public BigDecimal getTIV() {
+    public Long getTIV() {
         return TIV;
     }
 
-    public void setTIV(BigDecimal TIV) {
+    public void setTIV(Long TIV) {
         this.TIV = TIV;
     }
 
@@ -145,11 +143,11 @@ public class Combination {
         this.coverageDependencyId = coverageDependencyId;
     }
 
-    public BigDecimal getPercentage() {
+    public Long getPercentage() {
         return percentage;
     }
 
-    public void setPercentage(BigDecimal percentage) {
+    public void setPercentage(Long percentage) {
         this.percentage = percentage;
     }
 
@@ -161,107 +159,107 @@ public class Combination {
         this.periodOfIndemnity = periodOfIndemnity;
     }
 
-    public BigDecimal getSumTIVForExcess() {
+    public Long getSumTIVForExcess() {
         return sumTIVForExcess;
     }
 
-    public void setSumTIVForExcess(BigDecimal sumTIVForExcess) {
+    public void setSumTIVForExcess(Long sumTIVForExcess) {
         this.sumTIVForExcess = sumTIVForExcess;
     }
 
-    public BigDecimal getApportionExcess() {
+    public Long getApportionExcess() {
         return apportionExcess;
     }
 
-    public void setApportionExcess(BigDecimal apportionExcess) {
+    public void setApportionExcess(Long apportionExcess) {
         this.apportionExcess = apportionExcess;
     }
 
-    public BigDecimal getSumTIVForLimit() {
+    public Long getSumTIVForLimit() {
         return sumTIVForLimit;
     }
 
-    public void setSumTIVForLimit(BigDecimal sumTIVForLimit) {
+    public void setSumTIVForLimit(Long sumTIVForLimit) {
         this.sumTIVForLimit = sumTIVForLimit;
     }
 
-    public BigDecimal getApportionLimit() {
+    public Long getApportionLimit() {
         return apportionLimit;
     }
 
-    public void setApportionLimit(BigDecimal apportionLimit) {
+    public void setApportionLimit(Long apportionLimit) {
         this.apportionLimit = apportionLimit;
     }
 
-    public BigDecimal getSumTIVForExcessCSL() {
+    public Long getSumTIVForExcessCSL() {
         return sumTIVForExcessCSL;
     }
 
-    public void setSumTIVForExcessCSL(BigDecimal sumTIVForExcessCSL) {
+    public void setSumTIVForExcessCSL(Long sumTIVForExcessCSL) {
         this.sumTIVForExcessCSL = sumTIVForExcessCSL;
     }
 
-    public BigDecimal getSumTIVForLimitCSL() {
+    public Long getSumTIVForLimitCSL() {
         return sumTIVForLimitCSL;
     }
 
-    public void setSumTIVForLimitCSL(BigDecimal sumTIVForLimitCSL) {
+    public void setSumTIVForLimitCSL(Long sumTIVForLimitCSL) {
         this.sumTIVForLimitCSL = sumTIVForLimitCSL;
     }
 
-    public BigDecimal getNewExposure() {
+    public Long getNewExposure() {
         return newExposure;
     }
 
-    public void setNewExposure(BigDecimal newExposure) {
+    public void setNewExposure(Long newExposure) {
         this.newExposure = newExposure;
     }
 
-    public BigDecimal getLimit() {
+    public Long getLimit() {
         return limit;
     }
 
-    public void setLimit(BigDecimal limit) {
+    public void setLimit(Long limit) {
         this.limit = limit;
     }
 
-    public BigDecimal getExcess() {
+    public Long getExcess() {
         return excess;
     }
 
-    public void setExcess(BigDecimal excess) {
+    public void setExcess(Long excess) {
         this.excess = excess;
     }
 
-    public BigDecimal getDeductible() {
+    public Long getDeductible() {
         return deductible;
     }
 
-    public void setDeductible(BigDecimal deductible) {
+    public void setDeductible(Long deductible) {
         this.deductible = deductible;
     }
 
-    public BigDecimal getNewLimit() {
+    public Long getNewLimit() {
         return newLimit;
     }
 
-    public void setNewLimit(BigDecimal newLimit) {
+    public void setNewLimit(Long newLimit) {
         this.newLimit = newLimit;
     }
 
-    public BigDecimal getNewExcess() {
+    public Long getNewExcess() {
         return newExcess;
     }
 
-    public void setNewExcess(BigDecimal newExcess) {
+    public void setNewExcess(Long newExcess) {
         this.newExcess = newExcess;
     }
 
-    public BigDecimal getNewDeductible() {
+    public Long getNewDeductible() {
         return newDeductible;
     }
 
-    public void setNewDeductible(BigDecimal newDeductible) {
+    public void setNewDeductible(Long newDeductible) {
         this.newDeductible = newDeductible;
     }
 
@@ -321,11 +319,11 @@ public class Combination {
         this.riLimit = riLimit;
     }
 
-    public BigDecimal getAfterExcess() {
+    public Long getAfterExcess() {
         return afterExcess;
     }
 
-    public void setAfterExcess(BigDecimal afterExcess) {
+    public void setAfterExcess(Long afterExcess) {
         this.afterExcess = afterExcess;
     }
 
@@ -337,11 +335,11 @@ public class Combination {
         this.maxSeq = maxSeq;
     }
 
-    public BigDecimal getFinalExposure() {
+    public Long getFinalExposure() {
         return finalExposure;
     }
 
-    public void setFinalExposure(BigDecimal finalExposure) {
+    public void setFinalExposure(Long finalExposure) {
         this.finalExposure = finalExposure;
     }
 }

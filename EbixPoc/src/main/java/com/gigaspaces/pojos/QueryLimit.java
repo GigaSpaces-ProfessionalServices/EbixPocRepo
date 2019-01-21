@@ -1,7 +1,5 @@
 package com.gigaspaces.pojos;
 
-import java.math.BigDecimal;
-
 /**
  * @author Denys_Novikov
  * Date: 12/26/18
@@ -11,15 +9,15 @@ public class QueryLimit {
     private int id;
     private int policyaid;
     private int groupingId;
-    private BigDecimal line;
+    private Long line;
     private String policyReference;
     private String status;
-    private BigDecimal limit;
-    private BigDecimal excess;
-    private BigDecimal deductible;
-    private BigDecimal newLimit;
-    private BigDecimal newExcess;
-    private BigDecimal newDeductible;
+    private Long limit;
+    private Long excess;
+    private Long deductible;
+    private Long newLimit;
+    private Long newExcess;
+    private Long newDeductible;
     private Boolean csl;
     private Integer cslSeq;
     private String coverageId;
@@ -28,9 +26,9 @@ public class QueryLimit {
     private Boolean riLimit;
     private String lSeq;
     private String limitHeaderName;
-    private BigDecimal afterExcess;
+    private Long afterExcess;
     private Boolean maxSeq;
-    private BigDecimal finalExposure;
+    private Long finalExposure;
     private String reference;
 
     public QueryLimit() {
@@ -79,11 +77,11 @@ public class QueryLimit {
         this.groupingId = groupingId;
     }
 
-    public BigDecimal getLine() {
+    public Long getLine() {
         return line;
     }
 
-    public void setLine(BigDecimal line) {
+    public void setLine(Long line) {
         this.line = line;
     }
 
@@ -103,51 +101,51 @@ public class QueryLimit {
         this.status = status;
     }
 
-    public BigDecimal getLimit() {
+    public Long getLimit() {
         return limit;
     }
 
-    public void setLimit(BigDecimal limit) {
+    public void setLimit(Long limit) {
         this.limit = limit;
     }
 
-    public BigDecimal getExcess() {
+    public Long getExcess() {
         return excess;
     }
 
-    public void setExcess(BigDecimal excess) {
+    public void setExcess(Long excess) {
         this.excess = excess;
     }
 
-    public BigDecimal getDeductible() {
+    public Long getDeductible() {
         return deductible;
     }
 
-    public void setDeductible(BigDecimal deductible) {
+    public void setDeductible(Long deductible) {
         this.deductible = deductible;
     }
 
-    public BigDecimal getNewLimit() {
+    public Long getNewLimit() {
         return newLimit;
     }
 
-    public void setNewLimit(BigDecimal newLimit) {
+    public void setNewLimit(Long newLimit) {
         this.newLimit = newLimit;
     }
 
-    public BigDecimal getNewExcess() {
+    public Long getNewExcess() {
         return newExcess;
     }
 
-    public void setNewExcess(BigDecimal newExcess) {
+    public void setNewExcess(Long newExcess) {
         this.newExcess = newExcess;
     }
 
-    public BigDecimal getNewDeductible() {
+    public Long getNewDeductible() {
         return newDeductible;
     }
 
-    public void setNewDeductible(BigDecimal newDeductible) {
+    public void setNewDeductible(Long newDeductible) {
         this.newDeductible = newDeductible;
     }
 
@@ -215,11 +213,11 @@ public class QueryLimit {
         this.limitHeaderName = limitHeaderName;
     }
 
-    public BigDecimal getAfterExcess() {
+    public Long getAfterExcess() {
         return afterExcess;
     }
 
-    public void setAfterExcess(BigDecimal afterExcess) {
+    public void setAfterExcess(Long afterExcess) {
         this.afterExcess = afterExcess;
     }
 
@@ -231,11 +229,11 @@ public class QueryLimit {
         this.maxSeq = maxSeq;
     }
 
-    public BigDecimal getFinalExposure() {
+    public Long getFinalExposure() {
         return finalExposure;
     }
 
-    public void setFinalExposure(BigDecimal finalExposure) {
+    public void setFinalExposure(Long finalExposure) {
         this.finalExposure = finalExposure;
     }
 

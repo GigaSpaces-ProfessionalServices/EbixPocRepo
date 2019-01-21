@@ -1,6 +1,5 @@
 package com.gigaspaces.pojos;
 
-import java.math.BigDecimal;
 import java.sql.Date;
 
 /**
@@ -19,19 +18,19 @@ public class Coverage {
     private Integer policyaid;
     private Integer groupingId;
     private String coverageId;
-    private BigDecimal value;
+    private Long value;
     private String currencyId;
     private Boolean ai;
     private Integer coverageDependencyId;
-    private BigDecimal percentage;
+    private Long percentage;
     private Integer periodOfIndemnity;
-    private BigDecimal sumTIVForExcess;
-    private BigDecimal apportionExcess;
-    private BigDecimal sumTIVForLimit;
-    private BigDecimal apportionLimit;
-    private BigDecimal sumTIVForExcessCSL;
-    private BigDecimal sumTIVForLimitCSL;
-    private BigDecimal newExposure;
+    private Long sumTIVForExcess;
+    private Long apportionExcess;
+    private Long sumTIVForLimit;
+    private Long apportionLimit;
+    private Long sumTIVForExcessCSL;
+    private Long sumTIVForLimitCSL;
+    private Long newExposure;
 
     public Coverage() {}
 
@@ -141,11 +140,11 @@ public class Coverage {
         this.coverageId = coverageId;
     }
 
-    public BigDecimal getValue() {
+    public Long getValue() {
         return value;
     }
 
-    public void setValue(BigDecimal value) {
+    public void setValue(Long value) {
         this.value = value;
     }
 
@@ -165,11 +164,11 @@ public class Coverage {
         this.ai = ai;
     }
 
-    public BigDecimal getPercentage() {
+    public Long getPercentage() {
         return percentage;
     }
 
-    public void setPercentage(BigDecimal percentage) {
+    public void setPercentage(Long percentage) {
         this.percentage = percentage;
     }
 
@@ -181,59 +180,59 @@ public class Coverage {
         this.periodOfIndemnity = periodOfIndemnity;
     }
 
-    public BigDecimal getSumTIVForExcess() {
+    public Long getSumTIVForExcess() {
         return sumTIVForExcess;
     }
 
-    public void setSumTIVForExcess(BigDecimal sumTIVForExcess) {
+    public void setSumTIVForExcess(Long sumTIVForExcess) {
         this.sumTIVForExcess = sumTIVForExcess;
     }
 
-    public BigDecimal getApportionExcess() {
+    public Long getApportionExcess() {
         return apportionExcess;
     }
 
-    public void setApportionExcess(BigDecimal apportionExcess) {
+    public void setApportionExcess(Long apportionExcess) {
         this.apportionExcess = apportionExcess;
     }
 
-    public BigDecimal getSumTIVForLimit() {
+    public Long getSumTIVForLimit() {
         return sumTIVForLimit;
     }
 
-    public void setSumTIVForLimit(BigDecimal sumTIVForLimit) {
+    public void setSumTIVForLimit(Long sumTIVForLimit) {
         this.sumTIVForLimit = sumTIVForLimit;
     }
 
-    public BigDecimal getApportionLimit() {
+    public Long getApportionLimit() {
         return apportionLimit;
     }
 
-    public void setApportionLimit(BigDecimal apportionLimit) {
+    public void setApportionLimit(Long apportionLimit) {
         this.apportionLimit = apportionLimit;
     }
 
-    public BigDecimal getSumTIVForExcessCSL() {
+    public Long getSumTIVForExcessCSL() {
         return sumTIVForExcessCSL;
     }
 
-    public void setSumTIVForExcessCSL(BigDecimal sumTIVForExcessCSL) {
+    public void setSumTIVForExcessCSL(Long sumTIVForExcessCSL) {
         this.sumTIVForExcessCSL = sumTIVForExcessCSL;
     }
 
-    public BigDecimal getSumTIVForLimitCSL() {
+    public Long getSumTIVForLimitCSL() {
         return sumTIVForLimitCSL;
     }
 
-    public void setSumTIVForLimitCSL(BigDecimal sumTIVForLimitCSL) {
+    public void setSumTIVForLimitCSL(Long sumTIVForLimitCSL) {
         this.sumTIVForLimitCSL = sumTIVForLimitCSL;
     }
 
-    public BigDecimal getNewExposure() {
+    public Long getNewExposure() {
         return newExposure;
     }
 
-    public void setNewExposure(BigDecimal newExposure) {
+    public void setNewExposure(Long newExposure) {
         this.newExposure = newExposure;
     }
 

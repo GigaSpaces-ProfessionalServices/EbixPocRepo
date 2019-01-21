@@ -1,6 +1,7 @@
 package com.gigaspaces.pojos;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.sql.Date;
 import java.util.Objects;
 
@@ -21,17 +22,17 @@ public class CalculationLoop {
     private BigDecimal percentage;
     private Integer periodOfIndemnity;
     private BigDecimal sumTIVForExcess;
-    private BigDecimal apportionExcess;
-    private BigDecimal sumTIVForLimit;
-    private BigDecimal apportionLimit;
+    private BigDecimal apportionExcess; // x100
+    private BigDecimal sumTIVForLimit; // x100
+    private BigDecimal apportionLimit; // x100
     private BigDecimal sumTIVForExcessCSL;
     private BigDecimal sumTIVForLimitCSL;
     private BigDecimal newExposure;
     private BigDecimal limit;
     private BigDecimal excess;
     private BigDecimal deductible;
-    private BigDecimal newLimit;
-    private BigDecimal newExcess;
+    private BigDecimal newLimit;  // x100
+    private BigDecimal newExcess;  // x100
     private BigDecimal newDeductible;
     private Boolean csl;
     private Integer cslSeq;
@@ -40,7 +41,7 @@ public class CalculationLoop {
     private String lSeq;
     private String limitHeaderName;
     private Boolean riLimit;
-    private BigDecimal afterExcess;
+    private BigDecimal afterExcess;  // x100
     private Boolean maxSeq;
     private BigDecimal finalExposure;
     private String policyReference;
@@ -60,77 +61,30 @@ public class CalculationLoop {
     public CalculationLoop() {
     }
 
-    public CalculationLoop(CalculationLoop source) {
-        this.id = source.id;
-        this.policyaid = source.policyaid;
-        this.groupingId = source.groupingId;
-        this.coverageId = source.coverageId;
-        this.TIV = source.TIV;
-        this.covCurrency = source.covCurrency;
-        this.covAi = source.covAi;
-        this.coverageDependencyId = source.coverageDependencyId;
-        this.percentage = source.percentage;
-        this.periodOfIndemnity = source.periodOfIndemnity;
-        this.sumTIVForExcess = source.sumTIVForExcess;
-        this.apportionExcess = source.apportionExcess;
-        this.sumTIVForLimit = source.sumTIVForLimit;
-        this.apportionLimit = source.apportionLimit;
-        this.sumTIVForExcessCSL = source.sumTIVForExcessCSL;
-        this.sumTIVForLimitCSL = source.sumTIVForLimitCSL;
-        this.newExposure = source.newExposure;
-        this.limit = source.limit;
-        this.excess = source.excess;
-        this.deductible = source.deductible;
-        this.newLimit = source.newLimit;
-        this.newExcess = source.newExcess;
-        this.newDeductible = source.newDeductible;
-        this.csl = source.csl;
-        this.cslSeq = source.cslSeq;
-        this.limitType = source.limitType;
-        this.lhSeq = source.lhSeq;
-        this.lSeq = source.lSeq;
-        this.limitHeaderName = source.limitHeaderName;
-        this.riLimit = source.riLimit;
-        this.afterExcess = source.afterExcess;
-        this.maxSeq = source.maxSeq;
-        this.finalExposure = source.finalExposure;
-        this.policyReference = source.policyReference;
-        this.line = source.line;
-        this.reference = source.reference;
-        this.country = source.country;
-        this.state = source.state;
-        this.city = source.city;
-        this.inception = source.inception;
-        this.expiry = source.expiry;
-        this.calcAudit = source.calcAudit;
-        this.excessBreach = source.excessBreach;
-        this.limitBreach = source.limitBreach;
-    }
-
     public void copyMatchingFields(Combination source) {
         this.id = source.getId();
         this.policyaid = source.getPolicyaid();
         this.groupingId = source.getGroupingId();
         this.coverageId = source.getCoverageId();
-        this.TIV = source.getTIV();
+        this.TIV = source.getTIV() != null ? new BigDecimal(source.getTIV(), new MathContext(20)).setScale(8) : null;
         this.covCurrency = source.getCovCurrency();
         this.covAi = source.getCovAi();
         this.coverageDependencyId = source.getCoverageDependencyId();
-        this.percentage = source.getPercentage();
+        this.percentage = source.getPercentage() != null ? new BigDecimal(source.getPercentage(), new MathContext(20)).setScale(8) : null;
         this.periodOfIndemnity = source.getPeriodOfIndemnity();
-        this.sumTIVForExcess = source.getSumTIVForExcess();
-        this.apportionExcess = source.getApportionExcess();
-        this.sumTIVForLimit = source.getSumTIVForLimit();
-        this.apportionLimit = source.getApportionLimit();
-        this.sumTIVForExcessCSL = source.getSumTIVForExcessCSL();
-        this.sumTIVForLimitCSL = source.getSumTIVForLimitCSL();
-        this.newExposure = source.getNewExposure();
-        this.limit = source.getLimit();
-        this.excess = source.getExcess();
-        this.deductible = source.getDeductible();
-        this.newLimit = source.getNewLimit();
-        this.newExcess = source.getNewExcess();
-        this.newDeductible = source.getNewDeductible();
+        this.sumTIVForExcess = source.getSumTIVForExcess() != null ? new BigDecimal(source.getSumTIVForExcess(), new MathContext(20)).setScale(8) : null;
+        this.apportionExcess = source.getApportionExcess() != null ? new BigDecimal(source.getApportionExcess(), new MathContext(20)).setScale(8) : null;
+        this.sumTIVForLimit = source.getSumTIVForLimit() != null ? new BigDecimal(source.getSumTIVForLimit(), new MathContext(20)).setScale(8) : null;
+        this.apportionLimit = source.getApportionLimit() != null ? new BigDecimal(source.getApportionLimit(), new MathContext(20)).setScale(8) : null;
+        this.sumTIVForExcessCSL = source.getSumTIVForExcessCSL() != null ? new BigDecimal(source.getSumTIVForExcessCSL(), new MathContext(20)).setScale(8) : null;
+        this.sumTIVForLimitCSL = source.getSumTIVForLimitCSL() != null ? new BigDecimal(source.getSumTIVForLimitCSL(), new MathContext(20)).setScale(8) : null;
+        this.newExposure = source.getNewExposure() != null ? new BigDecimal(source.getNewExposure(), new MathContext(20)).setScale(8) : null;
+        this.limit = source.getLimit() != null ? new BigDecimal(source.getLimit(), new MathContext(20)).setScale(8) : null;
+        this.excess = source.getExcess() != null ? new BigDecimal(source.getExcess(), new MathContext(20)).setScale(8) : null;
+        this.deductible = source.getDeductible() != null ? new BigDecimal(source.getDeductible(), new MathContext(20)).setScale(8) : null;
+        this.newLimit = source.getNewLimit() != null ? new BigDecimal(source.getNewLimit(), new MathContext(20)).setScale(8) : null;
+        this.newExcess = source.getNewExcess() != null ? new BigDecimal(source.getNewExcess(), new MathContext(20)).setScale(8) : null;
+        this.newDeductible = source.getNewDeductible() != null ? new BigDecimal(source.getNewDeductible(), new MathContext(20)).setScale(8) : null;
         this.csl = source.getCsl();
         this.cslSeq = source.getCslSeq();
         this.limitType = source.getLimitType();
@@ -138,9 +92,9 @@ public class CalculationLoop {
         this.lSeq = source.getlSeq();
         this.limitHeaderName = source.getLimitHeaderName();
         this.riLimit = source.getRiLimit();
-        this.afterExcess = source.getAfterExcess();
+        this.afterExcess = source.getAfterExcess() != null ? new BigDecimal(source.getAfterExcess(), new MathContext(20)).setScale(8) : null;
         this.maxSeq = source.getMaxSeq();
-        this.finalExposure = source.getFinalExposure();
+        this.finalExposure = source.getFinalExposure() != null ? new BigDecimal(source.getFinalExposure(), new MathContext(20)).setScale(8) : null;
     }
 
     public Integer getId() {
@@ -551,5 +505,56 @@ public class CalculationLoop {
     public int hashCode() {
 
         return Objects.hash(id, policyaid, groupingId, coverageId, TIV, covCurrency, covAi, coverageDependencyId, percentage, periodOfIndemnity, sumTIVForExcess, apportionExcess, sumTIVForLimit, apportionLimit, sumTIVForExcessCSL, sumTIVForLimitCSL, newExposure, limit, excess, deductible, newLimit, newExcess, newDeductible, csl, cslSeq, limitType, lhSeq, lSeq, limitHeaderName, riLimit, afterExcess, maxSeq, finalExposure, policyReference, line, reference, country, state, city, inception, expiry, calcAudit, excessBreach, limitBreach);
+    }
+
+
+    @Override
+    public String toString() {
+        return "CalculationLoop{" +
+                "id=" + id +
+                ", policyaid=" + policyaid +
+                ", groupingId=" + groupingId +
+                ", coverageId='" + coverageId + '\'' +
+                ", TIV=" + TIV +
+                ", covCurrency='" + covCurrency + '\'' +
+                ", covAi=" + covAi +
+                ", coverageDependencyId=" + coverageDependencyId +
+                ", percentage=" + percentage +
+                ", periodOfIndemnity=" + periodOfIndemnity +
+                ", sumTIVForExcess=" + sumTIVForExcess +
+                ", apportionExcess=" + apportionExcess +
+                ", sumTIVForLimit=" + sumTIVForLimit +
+                ", apportionLimit=" + apportionLimit +
+                ", sumTIVForExcessCSL=" + sumTIVForExcessCSL +
+                ", sumTIVForLimitCSL=" + sumTIVForLimitCSL +
+                ", newExposure=" + newExposure +
+                ", limit=" + limit +
+                ", excess=" + excess +
+                ", deductible=" + deductible +
+                ", newLimit=" + newLimit +
+                ", newExcess=" + newExcess +
+                ", newDeductible=" + newDeductible +
+                ", csl=" + csl +
+                ", cslSeq=" + cslSeq +
+                ", limitType='" + limitType + '\'' +
+                ", lhSeq=" + lhSeq +
+                ", lSeq='" + lSeq + '\'' +
+                ", limitHeaderName='" + limitHeaderName + '\'' +
+                ", riLimit=" + riLimit +
+                ", afterExcess=" + afterExcess +
+                ", maxSeq=" + maxSeq +
+                ", finalExposure=" + finalExposure +
+                ", policyReference='" + policyReference + '\'' +
+                ", line=" + line +
+                ", reference='" + reference + '\'' +
+                ", country='" + country + '\'' +
+                ", state='" + state + '\'' +
+                ", city='" + city + '\'' +
+                ", inception=" + inception +
+                ", expiry=" + expiry +
+                ", calcAudit='" + calcAudit + '\'' +
+                ", excessBreach=" + excessBreach +
+                ", limitBreach=" + limitBreach +
+                '}';
     }
 }

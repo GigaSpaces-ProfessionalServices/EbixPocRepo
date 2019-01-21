@@ -14,6 +14,7 @@ import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
 
@@ -26,7 +27,7 @@ public class InitialLoader {
     private static Logger logger = LoggerFactory.getLogger(InitialLoader.class);
     private static final LhSeqComparator LHSEQ_COMPARATOR = new LhSeqComparator();
     private static final LSeqComparator LSEQ_COMPARATOR = new LSeqComparator();
-    private final int objCount = 1000001;
+    private final int objCount = 3000001;
 
     @Autowired
     private GigaSpace gigaspace;
@@ -47,9 +48,16 @@ public class InitialLoader {
         logger.info("Step 1 result size -> " + groupingAssets.size());
 
         //---------------------------
-        Map<Integer, List<InsurancePolicyItem>> policyaidToItem = Arrays.stream(insurancePolicyItems).collect(Collectors.groupingBy(InsurancePolicyItem::getPolicyaId));
+
+        Set<Integer> ids = new HashSet<>();
+        for (int i = 1; i < objCount; i++) {
+            ids.add(i);
+        }
+        logger.info("ids -> " + ids.size());
+        Map<Integer, List<InsurancePolicyItem>> policyaidToItem = Arrays.stream(insurancePolicyItems).filter(item -> ids.contains(item.getId())).collect(Collectors.groupingBy(InsurancePolicyItem::getPolicyaId));
 
         logger.info("Retrieving insurancePolicies...");
+
         InsurancePolicy[] insurancePolicies = gigaspace.readMultiple(createInsurancePolicySQLQuery());
         logger.info("insurancePolicies size: " + insurancePolicies.length);
 
@@ -119,12 +127,12 @@ public class InitialLoader {
             coverage.setPolicyaid(groupPolicyItem.getPolicyaid());
             coverage.setGroupingId(groupPolicyItem.getGroupingId());
 
-            coverage.setSumTIVForExcess(new BigDecimal(groupPolicyItem.getTiv(), new MathContext(20)).setScale(8));
-            coverage.setApportionExcess(new BigDecimal(0, new MathContext(20)).setScale(8));
-            coverage.setSumTIVForLimit(new BigDecimal(groupPolicyItem.getTiv(), new MathContext(20)).setScale(8));
-            coverage.setApportionLimit(new BigDecimal(0, new MathContext(20)).setScale(8));
-            coverage.setSumTIVForExcessCSL(new BigDecimal(groupPolicyItem.getTiv(), new MathContext(20)).setScale(8));
-            coverage.setSumTIVForLimitCSL(new BigDecimal(groupPolicyItem.getTiv(), new MathContext(20)).setScale(8));
+            coverage.setSumTIVForExcess(groupPolicyItem.getTiv());
+            coverage.setApportionExcess(0L);
+            coverage.setSumTIVForLimit(groupPolicyItem.getTiv());
+            coverage.setApportionLimit(0L);
+            coverage.setSumTIVForExcessCSL(groupPolicyItem.getTiv());
+            coverage.setSumTIVForLimitCSL(groupPolicyItem.getTiv());
 
             if (mappedByPolicyItemId.containsKey(groupPolicyItem.getId())) {
                 for (InsurancePolicyItemCoverageValue insurancePolicyItemCoverageValue : mappedByPolicyItemId.get(groupPolicyItem.getId())) {
@@ -132,13 +140,13 @@ public class InitialLoader {
                     Coverage newCoverage = new Coverage(coverage);
 
                     newCoverage.setCoverageId(insurancePolicyItemCoverageValue.getCoverageId());
-                    newCoverage.setValue(insurancePolicyItemCoverageValue.getValue());
+                    newCoverage.setValue(insurancePolicyItemCoverageValue.getValue() != null ? insurancePolicyItemCoverageValue.getValue().longValueExact() : null);
                     newCoverage.setCurrencyId(insurancePolicyItemCoverageValue.getCurrencyId());
                     newCoverage.setAi(insurancePolicyItemCoverageValue.getAi());
                     newCoverage.setCoverageDependencyId(insurancePolicyItemCoverageValue.getCoverageDependencyId());
-                    newCoverage.setPercentage(insurancePolicyItemCoverageValue.getPercentage());
+                    newCoverage.setPercentage(insurancePolicyItemCoverageValue.getPercentage() != null ? insurancePolicyItemCoverageValue.getPercentage().longValueExact() : null);
                     newCoverage.setPeriodOfIndemnity(insurancePolicyItemCoverageValue.getPeriodOfIndemnity());
-                    newCoverage.setNewExposure(insurancePolicyItemCoverageValue.getValue().setScale(8));
+                    newCoverage.setNewExposure(insurancePolicyItemCoverageValue.getValue() != null ? insurancePolicyItemCoverageValue.getValue().longValueExact() : null);
 
                     coverages.add(newCoverage);
                 }
@@ -177,12 +185,12 @@ public class InitialLoader {
             queryLimit.setId(groupPolicyItem.getId());
             queryLimit.setPolicyaid(groupPolicyItem.getPolicyaid());
             queryLimit.setGroupingId(groupPolicyItem.getGroupingId());
-            queryLimit.setLine(new BigDecimal(groupPolicyItem.getLine(), new MathContext(20)).setScale(8).divide(new BigDecimal(100)));
+            queryLimit.setLine(groupPolicyItem.getLine()/100);
             queryLimit.setReference(groupPolicyItem.getReference());
 
-            queryLimit.setAfterExcess(new BigDecimal(0, new MathContext(20)).setScale(8));
+            queryLimit.setAfterExcess(0L);
             queryLimit.setMaxSeq(false);
-            queryLimit.setFinalExposure(new BigDecimal(0, new MathContext(20)).setScale(8));
+            queryLimit.setFinalExposure(0L);
 
             if (mappedById.containsKey(groupPolicyItem.getPolicyaid())) {
                 InsurancePolicy insurancePolicy = mappedById.get(groupPolicyItem.getPolicyaid());
@@ -199,12 +207,12 @@ public class InitialLoader {
                     if (mappedLimitByLimitId.containsKey(limitLocation.getLimitId())) {
 
                         Limit limit = mappedLimitByLimitId.get(limitLocation.getLimitId());
-                        updatedWithLimitLocation.setLimit(BigDecimal.ZERO.add(limit.getLimit(), new MathContext(20)).setScale(8));
-                        updatedWithLimitLocation.setExcess(BigDecimal.ZERO.add(limit.getExcess(), new MathContext(20)).setScale(8));
-                        updatedWithLimitLocation.setDeductible(limit.getDeductible());
-                        updatedWithLimitLocation.setNewLimit(BigDecimal.ZERO.add(limit.getLimit(), new MathContext(20)).setScale(8));
-                        updatedWithLimitLocation.setNewExcess(BigDecimal.ZERO.add(limit.getExcess(), new MathContext(20)).setScale(8));
-                        updatedWithLimitLocation.setNewDeductible(limit.getDeductible());
+                        updatedWithLimitLocation.setLimit(limit.getLimit().longValueExact());
+                        updatedWithLimitLocation.setExcess(limit.getExcess().longValueExact());
+                        updatedWithLimitLocation.setDeductible(limit.getDeductible().longValueExact());
+                        updatedWithLimitLocation.setNewLimit(limit.getLimit().longValueExact());
+                        updatedWithLimitLocation.setNewExcess(limit.getExcess().longValueExact());
+                        updatedWithLimitLocation.setNewDeductible(limit.getDeductible().longValueExact());
                         updatedWithLimitLocation.setCsl(limit.getCsl());
                         updatedWithLimitLocation.setLimitType(limit.getLimitType());
                         updatedWithLimitLocation.setLhSeq(limit.getLimitHeaderSequence());
@@ -257,19 +265,19 @@ public class InitialLoader {
             combination.setCoverageId(coverage.getCoverageId());
 
 
-            combination.setTIV(coverage.getValue() != null ? coverage.getValue() : BigDecimal.ZERO);
+            combination.setTIV(coverage.getValue() != null ? coverage.getValue() : 0L);
             combination.setCovCurrency(coverage.getCurrencyId() != null ? coverage.getCurrencyId() : "USD");
             combination.setCovAi(coverage.getAi() != null ? coverage.getAi() : false);
             combination.setCoverageDependencyId(coverage.getCoverageDependencyId());
             combination.setPercentage(coverage.getPercentage());
             combination.setPeriodOfIndemnity(coverage.getPeriodOfIndemnity());
-            combination.setSumTIVForExcess(coverage.getSumTIVForExcess() != null ? coverage.getSumTIVForExcess() : BigDecimal.ZERO);
-            combination.setApportionExcess(coverage.getApportionExcess() != null ? coverage.getApportionExcess() : BigDecimal.ZERO);
-            combination.setSumTIVForLimit(coverage.getSumTIVForLimit() != null ? coverage.getSumTIVForLimit() : BigDecimal.ZERO);
-            combination.setApportionLimit(coverage.getApportionLimit() != null ? coverage.getApportionLimit() : BigDecimal.ZERO);
-            combination.setSumTIVForExcessCSL(coverage.getSumTIVForExcessCSL() != null ? coverage.getSumTIVForExcessCSL() : BigDecimal.ZERO);
-            combination.setSumTIVForLimitCSL(coverage.getSumTIVForLimitCSL() != null ? coverage.getSumTIVForLimitCSL() : BigDecimal.ZERO);
-            combination.setNewExposure(isBigDecimalNull(coverage.getNewExposure()) ? BigDecimal.ZERO : coverage.getNewExposure());
+            combination.setSumTIVForExcess(coverage.getSumTIVForExcess() != null ? coverage.getSumTIVForExcess() : 0L);
+            combination.setApportionExcess(coverage.getApportionExcess() != null ? coverage.getApportionExcess() : 0L);
+            combination.setSumTIVForLimit(coverage.getSumTIVForLimit() != null ? coverage.getSumTIVForLimit() : 0L);
+            combination.setApportionLimit(coverage.getApportionLimit() != null ? coverage.getApportionLimit() : 0L);
+            combination.setSumTIVForExcessCSL(coverage.getSumTIVForExcessCSL() != null ? coverage.getSumTIVForExcessCSL() : 0L);
+            combination.setSumTIVForLimitCSL(coverage.getSumTIVForLimitCSL() != null ? coverage.getSumTIVForLimitCSL() : 0L);
+            combination.setNewExposure(coverage.getNewExposure() == null ? 0L : coverage.getNewExposure());
 
             if (limitExists) {
                 fillCombinationWithLimit(combinations, combination, matchedLimits);
@@ -340,6 +348,7 @@ public class InitialLoader {
         });
 
 
+        logger.info("calculationLoop random -> " + calculationLoops.get(0));
 //        ------------------------------ -- RI
 
 
@@ -399,6 +408,7 @@ public class InitialLoader {
             result.add(obj);
         }
 
+        logger.info("obj -> " + result.get(0));
         logger.info("result size -> " + result.size());
         gigaspace.writeMultiple(result.toArray());
 
@@ -407,14 +417,9 @@ public class InitialLoader {
 
     private void updateExposureAndLimit(Collection<CalculationLoop> calculationLoops, boolean ri) {
         // cursor C1 simulation
-        calculationLoops.parallelStream().map(CalculationLoop::getLhSeq).sorted().forEach(limitHeader -> {
-
-
-//        for (Integer limitHeader : c1cursor) {
+        for (Integer limitHeader : calculationLoops.parallelStream().map(CalculationLoop::getLhSeq).sorted().collect(Collectors.toSet())) {
             // cursor B1 simulation
-            calculationLoops.parallelStream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader)).map(CalculationLoop::getlSeq).sorted().forEach(aB1cursor -> {
-
-//            for (String aB1cursor : b1cursor) {
+            for (String aB1cursor : calculationLoops.parallelStream().filter(calculationLoop -> calculationLoop.getLhSeq().equals(limitHeader)).map(CalculationLoop::getlSeq).sorted().collect(Collectors.toSet())) {
                 Integer limit = getAnIntFromString(aB1cursor);
 
                 Map<String, BigDecimal> newExposureSumsCSL0 = calculationLoops.parallelStream().filter(calculationLoop -> (calculationLoop.getLhSeq().equals(limitHeader)
@@ -623,8 +628,12 @@ public class InitialLoader {
                 }
 
 
-            });
-        });
+            }
+        }
+    }
+
+    private BinaryOperator<Long> sumLongValues() {
+        return (value1, value2) -> value1 + value2;
     }
 
     private int getAnIntFromString(String input) {
@@ -756,8 +765,6 @@ public class InitialLoader {
         List<Max> maxList = Collections.synchronizedList(new ArrayList<>());
         calculationLoops.parallelStream().collect(Collectors.groupingBy(calculationLoop -> "" + calculationLoop.getId() + calculationLoop.getPolicyaid() + calculationLoop.getGroupingId())).forEach((key, values) -> {
 
-//        for (Map.Entry<String, List<CalculationLoop>> entry : groupedCalculationLoops.entrySet()) {
-
             Integer maxlh = Collections.max(values, LHSEQ_COMPARATOR).getLhSeq();
             String maxl = Collections.max(values, LSEQ_COMPARATOR).getlSeq();
             CalculationLoop first = values.get(0);
@@ -865,12 +872,34 @@ public class InitialLoader {
     }
 
     private SQLQuery<InsurancePolicy> createInsurancePolicySQLQuery() {
-        // add limiter here to reduce result set
+
+//        List<Integer> ids = new ArrayList<>();
+//        for (int i = 1; i < objCount; i++) {
+//            ids.add(i);
+//        }
+//        logger.info("ids -> " + ids.size());
+//
+//        return new SQLQuery<>(InsurancePolicy.class, "id IN (?) ")
+//                .setParameter(1, ids);
         return new SQLQuery<>(InsurancePolicy.class, "")
                 .setProjections("id", "reference", "line");
     }
 
     private boolean isBigDecimalNull(BigDecimal bigDecimal) {
         return bigDecimal == null || (bigDecimal.compareTo(BigDecimal.ZERO) == 0);
+    }
+
+    private boolean isLongNull(Long value) {
+        return value == null || value == 0L;
+    }
+
+    /**
+     * converts BigDecimal to Long x 100 (to save numbers after dot)
+     * @param value
+     * @return
+     */
+    private Long convertBigDecimalToLong(BigDecimal value) {
+        if (value == null) return null;
+        return value.multiply(new BigDecimal(100)).longValueExact();
     }
 }
