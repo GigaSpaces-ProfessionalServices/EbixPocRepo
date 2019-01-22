@@ -13,6 +13,7 @@ import java.util.Objects;
 @SpaceClass
 public class FinalResult {
 
+    private String spaceId;
     private Integer id;
     private Integer policyaid;
     private Integer groupingId;
@@ -25,7 +26,6 @@ public class FinalResult {
     public FinalResult() {
     }
 
-    @SpaceId
     public Integer getId() {
         return id;
     }
@@ -123,5 +123,14 @@ public class FinalResult {
                 ", gross=" + gross +
                 ", net=" + net +
                 '}';
+    }
+
+    @SpaceId(autoGenerate = true)
+    public String getSpaceId() {
+        return spaceId;
+    }
+
+    public void setSpaceId(String spaceId) {
+        this.spaceId = spaceId;
     }
 }

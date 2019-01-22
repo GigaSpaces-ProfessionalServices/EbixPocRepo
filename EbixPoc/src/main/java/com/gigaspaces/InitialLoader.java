@@ -49,12 +49,12 @@ public class InitialLoader {
 
         //---------------------------
 
-        Set<Integer> ids = new HashSet<>();
-        for (int i = 1; i < objCount; i++) {
-            ids.add(i);
-        }
-        logger.info("ids -> " + ids.size());
-        Map<Integer, List<InsurancePolicyItem>> policyaidToItem = Arrays.stream(insurancePolicyItems).filter(item -> ids.contains(item.getId())).collect(Collectors.groupingBy(InsurancePolicyItem::getPolicyaId));
+//        Set<Integer> ids = new HashSet<>();
+//        for (int i = 1; i < objCount; i++) {
+//            ids.add(i);
+//        }
+//        logger.info("ids -> " + ids.size());
+        Map<Integer, List<InsurancePolicyItem>> policyaidToItem = Arrays.stream(insurancePolicyItems).collect(Collectors.groupingBy(InsurancePolicyItem::getPolicyaId));
 
         logger.info("Retrieving insurancePolicies...");
 
